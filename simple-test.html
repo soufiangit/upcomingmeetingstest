@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Auth Test</title>
+    <script src="https://unpkg.com/@microsoft/mgt@2.9.0/dist/bundle/mgt-loader.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        #status { padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Authentication Test</h1>
+        <div>
+            <mgt-login></mgt-login>
+        </div>
+        <div id="status">Status will appear here...</div>
+        <div>
+            <h2>Your Calendar</h2>
+            <mgt-agenda></mgt-agenda>
+        </div>
+    </div>
+
+    <script>
+        // App ID and Tenant ID
+        const appId = 'bce0435a-c2c6-438e-85bc-fcb18dc0988e';
+        const tenantId = '5085f52a-0916-469a-9b71-fca8b835b5f2';
+        
+        // Initialize MSAL2 provider
+        mgt.Providers.globalProvider = new mgt.Msal2Provider({
+            clientId: appId,
+            authority: `https://login.microsoftonline.com/${tenantId}`,
+            redirectUri: window.location.href.split('?')[0],
+            scopes: ['User.Read', 'Calendars.Read']
+        });
+        
+        // Set up calendar view
+        const agenda = document.querySelector('mgt-agenda');
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setHours(23, 59, 59, 999);
+        agenda.eventQuery = `/me/calendarview?startdatetime=${now.toISOString()}&enddatetime=${midnight.toISOString()}`;
+        
+        // Status updates
+        const statusDiv = document.getElementById('status');
+        mgt.Providers.globalProvider.onStateChanged((state) => {
+            statusDiv.textContent = `Auth state: ${state}`;
+        });
+        
+        document.querySelector('mgt-login').addEventListener('loginCompleted', () => {
+            statusDiv.textContent = 'Login successful! Loading calendar data...';
+            agenda.reload();
+        });
+        
+        agenda.addEventListener('dataChange', (e) => {
+            if (e.detail && e.detail.error) {
+                statusDiv.textContent = `Error: ${e.detail.error.message}`;
+            } else if (e.detail && e.detail.events) {
+                statusDiv.textContent = `Found ${e.detail.events.length} events for today`;
+            }
+        });
+    </script>
+</body>
+</html>

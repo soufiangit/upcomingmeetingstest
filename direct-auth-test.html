@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Auth Test</title>
+    <script src="https://unpkg.com/@microsoft/mgt@2.9.0/dist/bundle/mgt-loader.js"></script>
+</head>
+<body>
+    <h1>Direct Authentication Test</h1>
+    <div id="status">Checking authentication...</div>
+    <mgt-login></mgt-login>
+
+    <script>
+        // Hard-coded values from env.js for testing
+        const appId = 'bce0435a-c2c6-438e-85bc-fcb18dc0988e';
+        const tenantId = '5085f52a-0916-469a-9b71-fca8b835b5f2';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Initialize MSAL2 provider
+                mgt.Providers.globalProvider = new mgt.Msal2Provider({
+                    clientId: appId,
+                    authority: `https://login.microsoftonline.com/${tenantId}`,
+                    scopes: ['User.Read']
+                });
+                
+                // Check authentication state
+                mgt.Providers.globalProvider.onStateChanged((state) => {
+                    console.log('Auth state changed:', state);
+                    statusDiv.textContent = `Authentication state: ${state}`;
+                    
+                    if (state === mgt.ProviderState.SignedIn) {
+                        statusDiv.textContent += ' - Successfully signed in!';
+                        statusDiv.style.color = 'green';
+                    }
+                });
+            } catch (error) {
+                statusDiv.textContent = `Error initializing auth: ${error.message}`;
+                statusDiv.style.color = 'red';
+                console.error('Auth initialization error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Test</title>
+    <script src="https://unpkg.com/@microsoft/mgt@2.9.0/dist/bundle/mgt-loader.js"></script>
+    <script src="./env.js"></script>
+</head>
+<body>
+    <h1>Microsoft Graph Authentication Test</h1>
+    <div id="status">Checking authentication...</div>
+    <mgt-login></mgt-login>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusDiv = document.getElementById('status');
+            
+            // Initialize MSAL2 provider
+            mgt.Providers.globalProvider = new mgt.Msal2Provider({
+                clientId: appId,
+                authority: `https://login.microsoftonline.com/${tenantId}`,
+                scopes: ['User.Read']
+            });
+            
+            // Check authentication state
+            mgt.Providers.globalProvider.onStateChanged((state) => {
+                console.log('Auth state changed:', state);
+                statusDiv.textContent = `Authentication state: ${state}`;
+                
+                if (state === mgt.ProviderState.SignedIn) {
+                    statusDiv.textContent += ' - Successfully signed in!';
+                    statusDiv.style.color = 'green';
+                    
+                    // Try to get user info
+                    mgt.Providers.globalProvider.graph.client
+                        .api('/me')
+                        .get()
+                        .then(user => {
+                            statusDiv.textContent += ` - Hello, ${user.displayName}!`;
+                            console.log('User info:', user);
+                        })
+                        .catch(error => {
+                            statusDiv.textContent += ` - Error fetching user info: ${error.message}`;
+                            console.error('Error fetching user:', error);
+                        });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

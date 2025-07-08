@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal Auth</title>
+    <script src="https://unpkg.com/@microsoft/mgt@2.9.0/dist/bundle/mgt-loader.js"></script>
+</head>
+<body>
+    <h1>Minimal Authentication Test</h1>
+    <mgt-login></mgt-login>
+    <div id="status">Not signed in</div>
+
+    <script>
+        const appId = 'bce0435a-c2c6-438e-85bc-fcb18dc0988e';
+        const tenantId = '5085f52a-0916-469a-9b71-fca8b835b5f2';
+        
+        // Initialize
+        mgt.Providers.globalProvider = new mgt.Msal2Provider({
+            clientId: appId,
+            authority: `https://login.microsoftonline.com/${tenantId}`,
+            redirectUri: window.location.href.split('?')[0],
+            scopes: ['User.Read']
+        });
+        
+        // Monitor auth state
+        const statusDiv = document.getElementById('status');
+        mgt.Providers.globalProvider.onStateChanged((state) => {
+            statusDiv.textContent = `Auth state: ${state}`;
+            console.log('Auth state changed:', state);
+        });
+    </script>
+</body>
+</html>

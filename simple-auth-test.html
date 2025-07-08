@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Auth Test</title>
+    <script src="https://unpkg.com/@microsoft/mgt@2.9.0/dist/bundle/mgt-loader.js"></script>
+</head>
+<body>
+    <h1>Simple Authentication Test</h1>
+    
+    <div style="margin: 20px 0;">
+        <mgt-login></mgt-login>
+    </div>
+    
+    <div id="user-info" style="margin: 20px; padding: 10px; border: 1px solid #ccc;">
+        <p>User info will appear here after sign-in...</p>
+    </div>
+    
+    <script>
+        // App registration details (directly from env.js)
+        const appId = 'bce0435a-c2c6-438e-85bc-fcb18dc0988e';
+        const tenantId = '5085f52a-0916-469a-9b71-fca8b835b5f2';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const userInfoDiv = document.getElementById('user-info');
+            
+            // Initialize the MSAL2 provider
+            mgt.Providers.globalProvider = new mgt.Msal2Provider({
+                clientId: appId,
+                authority: `https://login.microsoftonline.com/${tenantId}`,
+                redirectUri: window.location.href,
+                scopes: ['User.Read']
+            });
+            
+            // Add event listener for login completed
+            document.querySelector('mgt-login').addEventListener('loginCompleted', async () => {
+                try {
+                    // Get user details after successful login
+                    const me = await mgt.Providers.globalProvider.graph.client
+                        .api('/me')
+                        .get();
+                        
+                    userInfoDiv.innerHTML = `
+                        <p><strong>User signed in successfully!</strong></p>
+                        <p>Display Name: ${me.displayName}</p>
+                        <p>Email: ${me.mail || me.userPrincipalName}</p>
+                        <p>ID: ${me.id}</p>
+                    `;
+                } catch (error) {
+                    userInfoDiv.innerHTML = `<p style="color: red;">Error getting user info: ${error.message}</p>`;
+                    console.error('Error getting user info:', error);
+                }
+            });
+            
+            // Add event listener for login failure
+            document.querySelector('mgt-login').addEventListener('loginFailed', (e) => {
+                userInfoDiv.innerHTML = `<p style="color: red;">Login failed: ${e.detail.error}</p>`;
+                console.error('Login failed:', e.detail.error);
+            });
+        });
+    </script>
+</body>
+</html>

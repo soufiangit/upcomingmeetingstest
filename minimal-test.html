@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal MGT Test</title>
+    <script src="https://unpkg.com/regenerator-runtime/runtime.js"></script>
+    <script src="https://unpkg.com/@microsoft/mgt@2.9.0/dist/bundle/mgt-loader.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e6f7e6;
+            color: #008000;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+        .pending {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Minimal MGT Auth Test</h1>
+        
+        <div style="text-align: right;">
+            <mgt-login></mgt-login>
+        </div>
+        
+        <div id="status" class="pending">Initializing...</div>
+        
+        <div id="user-details" style="display: none;">
+            <h2>User Details</h2>
+            <mgt-person person-query="me" view="twolines"></mgt-person>
+        </div>
+        
+        <div id="calendar-section" style="display: none;">
+            <h2>Today's Calendar</h2>
+            <mgt-agenda></mgt-agenda>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // App registration details
+            const appId = 'bce0435a-c2c6-438e-85bc-fcb18dc0988e';
+            const tenantId = '5085f52a-0916-469a-9b71-fca8b835b5f2';
+            
+            const statusDiv = document.getElementById('status');
+            const userDetailsDiv = document.getElementById('user-details');
+            const calendarSection = document.getElementById('calendar-section');
+            
+            try {
+                console.log('Initializing MSAL2Provider...');
+                console.log('App ID:', appId);
+                console.log('Tenant ID:', tenantId);
+                
+                // Initialize the MSAL2 provider with explicit redirect URI
+                mgt.Providers.globalProvider = new mgt.Msal2Provider({
+                    clientId: appId,
+                    authority: `https://login.microsoftonline.com/${tenantId}`,
+                    redirectUri: window.location.href.split('?')[0],
+                    scopes: ['User.Read', 'Calendars.Read']
+                });
+                
+                // Set up the calendar query for today
+                const agenda = document.querySelector('mgt-agenda');
+                const now = new Date();
+                const midnight = new Date();
+                midnight.setDate(midnight.getDate() + 1);
+                midnight.setHours(0, 0, 0, 0);
+                agenda.eventQuery = `/me/calendarview?startdatetime=${now.toISOString()}&enddatetime=${midnight.toISOString()}&$orderby=start/dateTime`;
+                
+                // Monitor authentication state changes
+                mgt.Providers.globalProvider.onStateChanged((state) => {
+                    console.log('Auth state changed:', state);
+                    
+                    if (state === mgt.ProviderState.SignedIn) {
+                        statusDiv.textContent = 'Signed in successfully! Fetching calendar data...';
+                        statusDiv.className = 'success';
+                        userDetailsDiv.style.display = 'block';
+                        calendarSection.style.display = 'block';
+                        
+                        // Force reload agenda
+                        agenda.reload();
+                    } else if (state === mgt.ProviderState.SigningIn) {
+                        statusDiv.textContent = 'Signing in...';
+                        statusDiv.className = 'pending';
+                    } else {
+                        statusDiv.textContent = `Not signed in. State: ${state}`;
+                        statusDiv.className = 'pending';
+                        userDetailsDiv.style.display = 'none';
+                        calendarSection.style.display = 'none';
+                    }
+                });
+                
+                // Agenda data change monitoring
+                agenda.addEventListener('dataChange', (e) => {
+                    console.log('Agenda data changed:', e.detail);
+                    
+                    if (e.detail && e.detail.error) {
+                        statusDiv.textContent = `Calendar error: ${e.detail.error.message}`;
+                        statusDiv.className = 'error';
+                    } else if (e.detail && e.detail.events) {
+                        if (e.detail.events.length > 0) {
+                            statusDiv.textContent = `Success! Found ${e.detail.events.length} meetings for today.`;
+                        } else {
+                            statusDiv.textContent = 'Success! No meetings found for today.';
+                        }
+                        statusDiv.className = 'success';
+                    }
+                });
+                
+                // Error monitoring
+                agenda.addEventListener('error', (e) => {
+                    console.error('Agenda error:', e.detail);
+                    statusDiv.textContent = `Calendar error: ${e.detail.message || 'Unknown error'}`;
+                    statusDiv.className = 'error';
+                });
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                statusDiv.textContent = `Initialization error: ${error.message}`;
+                statusDiv.className = 'error';
+            }
+        });
+    </script>
+</body>
+</html>
